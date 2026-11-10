@@ -33,75 +33,72 @@ const Contact = () => {
   };
 
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isSubmitting) return;
 
-    // Check whether an email address is configured
-    if (!CONTACT_EMAIL.trim()) {
-      setStatus({
-        type: "danger",
-        message: "Please configure the enquiry email address.",
-      });
-      return;
-    }
-
-    // Spam protection
     if (formData.website) return;
 
     setIsSubmitting(true);
     setStatus({ type: "", message: "" });
-
-    const form = new FormData();
-
-    form.append("_subject", `Urban Baby Enquiry - ${formData.name}`);
-    form.append("_template", "table");
-    form.append("_captcha", "false");
-
-    form.append("Full Name", formData.name);
-    form.append("Phone Number", formData.phone);
-    form.append("Email Address", formData.email);
-    form.append("Enquiry Type", formData.enquiryType);
-    form.append("Company Name", formData.company || "Not Provided");
-    form.append("City", formData.city || "Not Provided");
-    form.append("Required Quantity", formData.quantity || "Not Specified");
-    form.append("Message", formData.message);
 
     try {
       const response = await fetch(
         `https://formsubmit.co/ajax/${CONTACT_EMAIL}`,
         {
           method: "POST",
-          body: form,
           headers: {
+            "Content-Type": "application/json",
             Accept: "application/json",
           },
+          body: JSON.stringify({
+            _subject: `Urban Baby Enquiry - ${formData.name}`,
+            _template: "table",
+            _captcha: "false",
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            enquiryType: formData.enquiryType,
+            company: formData.company || "Not Provided",
+            city: formData.city || "Not Provided",
+            quantity: formData.quantity || "Not Specified",
+            message: formData.message,
+          }),
         }
       );
 
       const result = await response.json();
 
-      if (
-        response.ok &&
-        (result.success === "true" || result.success === true)
-      ) {
-        setStatus({
-          type: "success",
-          message: "Thank you! Your enquiry has been sent successfully.",
-        });
+      console.log("FormSubmit response:", result);
 
-        setFormData(initialFormData);
-      } else {
-        throw new Error(result.message || "Unable to submit enquiry.");
+      if (
+        !response.ok ||
+        (result.success !== true && result.success !== "true")
+      ) {
+        throw new Error(
+          result.message || `Submission failed: HTTP ${response.status}`
+        );
       }
+
+      setStatus({
+        type: "success",
+        message: "Thank you! Your enquiry has been sent successfully.",
+      });
+
+      setFormData(initialFormData);
+
     } catch (error) {
-      console.error("Contact form error:", error);
+      console.error("FormSubmit error:", error);
 
       setStatus({
         type: "danger",
-        message: "Unable to send your enquiry. Please try again.",
+        message:
+          error.message ||
+          "Unable to send your enquiry. Please try again.",
       });
+
     } finally {
       setIsSubmitting(false);
     }
@@ -136,7 +133,7 @@ const Contact = () => {
             <div className="col-lg-5">
               <div className="urban-contact-content h-100">
                 <span className="urban-product-subtitle text-uppercase fw-semibold">
-                  Let's Connect df
+                  Let's Connect 
                 </span>
 
                 <h2 className="urban-product-heading fw-bold mt-2 mb-3">
